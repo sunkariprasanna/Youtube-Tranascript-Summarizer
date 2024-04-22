@@ -1,0 +1,149 @@
+# app.py 
+from flask import Flask, request from youtube_transcript_api import 
+YouTubeTranscriptApi from transformers import pipeline app = Flask( name ) @app.get('/summary') def summary_api(): 
+url = request.args.get('url', '') video_id = url.split('=')[1] 
+summary = get_summary(get_transcript(video_id)) return summary, 200 
+def get_transcript(video_id): 
+transcript_list = YouTubeTranscriptApi.get_transcript(video_id) transcript = ' '.join([d['text'] for d in transcript_list]) return transcript 
+def get_summary(transcript): 
+summariser = pipeline('summarization') summary = '' for i in range(0, (len(transcript)//1000)+1): 
+summary_text = summariser(transcript[i*1000:(i+1)*1000])[0]['summary_text'] summary = summary + summary_text + ' ' 
+return summary 
+if    name  == ' main ': 
+app.run()
+
+
+
+ 
+# manifest.json 
+{ 
+"manifest_version": 3, 
+"name": "Youtube Summariser", 
+"description": "An extension to summarize youtube videos using the transcript", 
+"version": "1.0", 
+"permissions": ["activeTab", "declarativeContent"], 
+"host_permissions": ["http://127.0.0.1:5000/*"], 
+ 
+"action": { 
+"default_title": "Summarise this video", 
+"default_icon": { 
+"16": "images/icon.png", 
+"32": "images/icon.png", 
+"48": "images/icon.png", 
+"128": "images/icon.png" 
+}, 
+"default_popup": "popup.html" 
+}, 
+"icons": { 
+"16": "images/icon.png", 
+"32": "images/icon.png", 
+"48": "images/icon.png", 
+"128": "images/icon.png" 
+}
+} 
+"content_scripts": [{ 
+"matches": ["https://www.google.com/*"], 
+"css": ["main.css]"] 
+}]
+
+
+
+
+
+
+
+# popup.js 
+
+const btn = document.getElementById("summarise"); 
+btn.addEventListener("click", function() {
+ btn.disabled = true; 
+btn.innerHTML = "Summarising...";
+ chrome.tabs.query({currentWindow: true, active: true}, function(tabs){ var url = tabs[0].url; var xhr = new XMLHttpRequest(); 
+xhr.open("GET", "http://127.0.0.1:5000/summary?url=" + url, true); 
+xhr.onload = function() { 
+var text = xhr.responseText; 
+const p = document.getElementById("output"); 
+p.innerHTML = text; 
+btn.disabled = false;
+ btn.innerHTML = "Summarise"; 
+}
+ xhr.send(); 
+}); 
+}); 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# popup.html 
+<!DOCTYPE html> 
+<html> 
+<head> 
+<title>Youtube Transcript Summariser</title> 
+<style> h1 { 
+ 	text-align: center; 
+} 	
+ body {  
+      width: max-content; 
+      max-width: 800px; 
+} 
+button {
+ background-color: rgb(255, 0, 0); 
+ color: white;
+ border-radius: 8px; 
+ width: max-content;
+ height: max-content;
+ padding: 10px; 
+ font-size: large; 
+ margin: auto; 
+ display: block; 
+ border-color: coral; 
+}
+ button[disabled] {
+    background-color: lightcoral; 
+color: white;
+border-radius: 8px; 
+width: max-content; 
+height: max-content; 
+padding: 10px; 
+
+
+
+font-size: large; 
+margin: auto; 
+display: block; 
+border-color: lightpink; 
+} 
+p { 
+    font-size: medium; 
+} 
+</style> 
+</head> 
+<body>
+<h1>Youtube Transcript Summariser</h1> 
+<button id="summarise" type="button">Summarise</button> <br/> 
+<p id="output"></p> 
+<script src="popup.js"></script> 
+</body> 
+</html>  
